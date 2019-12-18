@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.kp.dao.ArticleDao">
+    <resultMap id="articleMap" type="article">
+        <id property="art_id" column="art_id"></id>
+        <result property="art_user_id" column="art_user_id"></result>
+        <result property="art_title" column="art_title"></result>
+        <result property="art_tag_id" column="art_tag_id"></result>
+        <result property="art_category_id" column="art_category_id"></result>
+        <result property="art_content" column="art_content"></result>
+        <result property="art_create_time" column="art_create_time"></result>
+        <result property="art_com_num" column="art_com_num"></result>
+        <result property="art_hot_num" column="art_hot_num"></result>
+        <result property="art_like_num" column="art_like_num"></result>
+        <result property="art_img" column="art_img"></result>
+        <!-- 一对一， 配置角色集合的映射 -->
+        <association property="articleTag" column="art_tag_id" javaType="articletag">
+            <id property="tag_id" column="tag_id"></id>
+            <result property="tag_cid" column="tag_cid"></result>
+            <result property="tag_name" column="tag_name"></result>
+            <result property="tag_content" column="tag_content"></result>
+        </association>
+        <!-- 一对一的关系映射：配置封装user的内容-->
+        <association property="user" column="art_user_id" javaType="user">
+            <id property="user_id" column="user_id"></id>
+            <result property="user_name" column="user_name"></result>
+        </association>
+        <collection property="commentList" ofType="Comment">
+            <id property="com_id" column="com_id"></id>
+            <result property="com_content" column="com_content"></result>
+            <result property="com_art_id" column="com_art_id"></result>
+            <result property="com_user_id" column="com_user_id"></result>
+            <result property="com_like" column="com_like"></result>
+            <result property="com_time" column="com_time"></result>
+        </collection>
+    </resultMap>
+
+    <select id="findAllArticle" resultMap="articleMap">
+        select a.*,tag.tag_name,u.user_name from article a
+        left outer join article_tag tag on a.art_tag_id = tag.tag_id
+        left outer join user_info u on u.user_id=a.art_user_id
+
+    </select>
+
+    <select id="searchArticle" parameterType="java.lang.String" resultMap="articleMap">
+        select a.*,tag.tag_name,u.user_name from article a
+        left outer join article_tag tag on a.art_tag_id = tag.tag_id
+        left outer join user_info u on u.user_id=a.art_user_id
+        <where>
+            <if test="keyboard!=null ">
+                or a.art_title like "%"#{keyboard}"%"
+                or a.art_content like "%"#{keyboard}"%"
+            </if>
+        </where>
+    </select>
+
+    <select id="findArticleById" parameterType="Integer" resultMap="articleMap">
+        select a.*,tag.tag_name from article a
+        left outer join article_tag tag on a.art_tag_id = tag.tag_id
+        where a.art_id = #{art_id}
+    </select>
+
+    <resultMap id="commentMap" type="comment">
+        <id property="com_id" column="com_id"></id>
+        <result property="com_content" column="com_content"></result>
+        <result property="com_art_id" column="com_art_id"></result>
+        <result property="com_user_id" column="com_user_id"></result>
+        <result property="com_like" column="com_like"></result>
+        <result property="com_time" column="com_time"></result>
+
+        <association property="userInfo" column="com_user_id" javaType="userinfo">
+            <id property="user_id" column="user_id"></id>
+            <result property="user_name" column="user_name"></result>
+            <result property="user_img" column="user_img"></result>
+        </association>
+    </resultMap>
+
+    <select id="listComment" parameterType="Integer" resultMap="commentMap">
+        select * from article a
+        left outer join comment c on a.art_id=c.com_art_id
+        left outer join user_info ui on c.com_user_id=ui.user_id
+        where a.art_id = #{art_id}
+    </select>
+
+    <select id="findGreatArticle" parameterType="greatarticle" resultType="greatarticle">
+        select * from great_article
+        where ga_art_id = #{ga_art_id} and ga_user_id=#{ga_user_id}
+    </select>
+
+    <insert id="saveGreatArticle"  parameterType="greatarticle">
+        insert into great_article(ga_art_id,ga_user_id,ga_status) values (#{ga_art_id},#{ga_user_id},#{ga_status})
+    </insert>
+
+    <update id="addArtlike" parameterType="Integer">
+        update article set art_like_num = art_like_num+1 where art_id = #{art_id}
+    </update>
+
+    <update id="decArtlike" parameterType="Integer">
+        update article set art_like_num = art_like_num-1 where art_id = #{art_id}
+    </update>
+
+    <update id="updateGreatArticle" parameterType="greatarticle">
+        update great_article set ga_status = #{ga_status} where ga_id=#{ga_id}
+    </update>
+
+    <select id="findArticleByTagName" parameterType="java.lang.String" resultMap="articleMap">
+        select a.*,tag.tag_name,u.user_name from article a
+        left outer join article_tag tag on a.art_tag_id = tag.tag_id
+        left outer join user_info u on u.user_id=a.art_user_id
+        where art_tag_id =
+        (select tag_id from article_tag where tag_name = #{tag_name})
+    </select>
+
+    <insert id="saveArticle" parameterType="article">
+        insert into article(art_user_id,art_title,art_tag_id,art_category_id,art_content,art_img)
+        values(#{art_user_id},#{art_title},#{art_tag_id},#{art_category_id},#{art_content},#{art_img})
+    </insert>
+
+    <select id="listArtTitle" resultType="article">
+        select * from article order by art_like_num desc limit 6
+    </select>
+
+    <select id="searchArtTitle" resultType="article">
+        select * from article order by art_hot_num desc limit 6
+    </select>
+</mapper>
